@@ -6,10 +6,11 @@ import random
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import RandomizedSearchCV
+import pickle
 
 # read data
-kmer_neg_data = pd.read_csv('kmer_negative_training.csv', nrows=5000, header=None, error_bad_lines=False)
-kmer_pos_data = pd.read_csv('kmer_positive_training.csv', nrows=5000, header=None, error_bad_lines=False)
+kmer_neg_data = pd.read_csv('kmer_negative_training.csv', header=None, error_bad_lines=False)
+kmer_pos_data = pd.read_csv('kmer_positive_training.csv', header=None, error_bad_lines=False)
 
 kmer_full_data = pd.concat([kmer_pos_data, kmer_neg_data], ignore_index=True, join='outer')
 
@@ -45,10 +46,17 @@ print(random_grid)
 x_train, x_test, y_train, y_test = train_test_split(features, label)
 
 rf = RandomForestClassifier()
-rf_random = RandomizedSearchCV(estimator=rf, param_distributions=random_grid, n_iter=100, cv=3, verbose=2,
+rf_random = RandomizedSearchCV(estimator=rf, param_distributions=random_grid, n_iter=10, cv=3, verbose=2,
                                random_state=42, n_jobs=-1)
 
 rf.fit(x_train, y_train)
+
+# save the model
+filename = 'my_model.sav'
+pickle.dump(rf_random, open(filename, 'wb'))
+
+
+
 
 print(rf.score(x_test, y_test))
 print(rf_random.best_score_)
