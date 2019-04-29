@@ -5,17 +5,50 @@ import math as math
 import random
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RandomizedSearchCV
 
 # read data
-kmer_neg_data = pd.read_csv('kmer_negative_training.csv')
-kmer_pos_data = pd.read_csv('kmer_positive_training.csv')
+kmer_neg_data = pd.read_csv('kmer_negative_training.csv', nrows=5000, header=None, error_bad_lines=False)
+kmer_pos_data = pd.read_csv('kmer_positive_training.csv', nrows=5000, header=None, error_bad_lines=False)
 
-kmer_full_data = pd.concat(kmer_neg_data, kmer_pos_data, ignore_index=True)
+kmer_full_data = pd.concat([kmer_pos_data, kmer_neg_data], ignore_index=True, join='outer')
 
-features = kmer_neg_data.iloc[:, 0: 2066]
-label = kmer_neg_data.iloc[:, 2066]
+features = kmer_full_data.iloc[:, 0: 2066]
+label = kmer_full_data.iloc[:, 2066]
 
-print(features.head(10))
-print(label.head(10))
+# set up hyper parameter search
+# Number of trees in random forest
+n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
+# Number of features to consider at every split
+max_features = ['auto', 'sqrt']
+# Maximum number of levels in tree
+max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
+max_depth.append(None)
+# Minimum number of samples required to split a node
+min_samples_split = [2, 5, 10]
+# Minimum number of samples required at each leaf node
+min_samples_leaf = [1, 2, 4]
+# Method of selecting samples for training each tree
+bootstrap = [True, False]
+# Create the random grid
+random_grid = {'n_estimators': n_estimators,
+               'max_features': max_features,
+               'max_depth': max_depth,
+               'min_samples_split': min_samples_split,
+               'min_samples_leaf': min_samples_leaf,
+               'bootstrap': bootstrap}
+print(random_grid)
+
+# print(features)
+# print(label)
 
 x_train, x_test, y_train, y_test = train_test_split(features, label)
+
+rf = RandomForestClassifier()
+rf_random = RandomizedSearchCV(estimator=rf, param_distributions=random_grid, n_iter=100, cv=3, verbose=2,
+                               random_state=42, n_jobs=-1)
+
+rf.fit(x_train, y_train)
+
+print(rf.score(x_test, y_test))
+print(rf_random.best_score_)
